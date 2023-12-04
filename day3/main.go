@@ -2,58 +2,69 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"unicode"
 )
 
 func main() {
 	input := getInput()
-	// exploreInput(input)
 	partNums := getPartNums(input)
-
 	sum := 0
 
 	for i, partNum := range partNums {
-		// fmt.Printf("\n\n%s ", partNums.number)
 		for _, coord := range partNum.coords {
-			// fmt.Printf("%s", string(input[coord.row][coord.col]))
 			adjCoord := getAdjacentCoords(coord, input)
 			partNums[i].adjCoords = append(partNums[i].adjCoords, adjCoord...)
 		}
 
-		// fmt.Printf("Adjcoords: %v\n\n", partNums[i].adjCoords)
-
 		for _, adjCoord := range partNums[i].adjCoords {
 			adjChar := rune(input[adjCoord.row][adjCoord.col])
-			// fmt.Printf("Adj char: %s", string(adjChar))
 			if string(adjChar) != "." && !unicode.IsDigit(adjChar) {
 				partNums[i].hasAdjacentSymbol = true
 			}
 		}
-
-		// if 1.00001 > 1 {
-		// 	log.Panic("planned stop")
-		// }
-
-		if !partNums[i].hasAdjacentSymbol {
-			fmt.Printf("Number: %s, Adj: %v\n", partNum.number, partNums[i].hasAdjacentSymbol)
-		}
 	}
 
 	for i, partNum := range partNums {
-		// fmt.Println(partNum.number, partNum.hasAdjacentSymbol)
 		if partNums[i].hasAdjacentSymbol {
 			thisNum, err := strconv.Atoi(partNum.number)
-			// fmt.Println(thisNum)
 			if err != nil {
 				fmt.Printf("Error converting %s to int: %v\n", partNum.number, err)
 			}
-
 			sum += thisNum
 		}
 	}
 
+	starCoords := getStarCoords(input)
+	gearPowerSum := 0
+	for _, starCoord := range starCoords {
+		theseGears := []int{}
+		for _, partNum := range partNums {
+			partMatched := false
+			for _, coord := range partNum.adjCoords {
+				if partMatched {
+					continue
+				}
+				if starCoord == coord {
+					partMatched = true
+					num, err := strconv.Atoi(partNum.number)
+					if err != nil {
+						log.Panicf("Error converting %s to int: %v\n", partNum.number, err)
+					}
+					theseGears = append(theseGears, num)
+				}
+			}
+		}
+
+		if len(theseGears) == 2 {
+			gearPowerSum += theseGears[0] * theseGears[1]
+		}
+
+	}
+
 	fmt.Printf("Part 1 answer: %d\n", sum)
+	fmt.Printf("Part 2 answer: %d\n", gearPowerSum)
 }
 
 func getAdjacentCoords(c Coord, input []string) []Coord {
@@ -74,20 +85,15 @@ func getAdjacentCoords(c Coord, input []string) []Coord {
 		newRow := c.row + direction.row
 		newCol := c.col + direction.col
 
-		// fmt.Printf("[[%d, %d]]", newRow, newCol)
-
 		if newRow < 0 || newRow >= len(input) {
 			continue
 		}
 		if newCol < 0 || newCol >= len(input[newRow]) {
 			continue
 		}
-
 		adjacentCoord := Coord{row: newRow, col: newCol}
 		adjacentCoords = append(adjacentCoords, adjacentCoord)
 	}
-
-	// fmt.Printf("\n Coordinate: %v\n Adjacent Coords: %v\n\n", c, adjacentCoords)
 
 	return adjacentCoords
 }
@@ -97,29 +103,24 @@ type Coord struct {
 	col int
 }
 
-func exploreInput(input []string) {
-	// fmt.Printf("N rows: %d \n", len(input))
-	uniqueRunes := make(map[rune]bool)
-
-	for _, row := range input {
-		// fmt.Printf("N runes: %d \n", utf8.RuneCountInString(row))
-		for _, run := range row {
-			// if !unicode.IsDigit(run) {
-			uniqueRunes[run] = true
-			// }
-		}
-	}
-
-	// for r := range uniqueRunes {
-	// 	// fmt.Printf("%c ", r)
-	// }
-}
-
 type PartNum struct {
 	number            string
 	coords            []Coord
 	hasAdjacentSymbol bool
 	adjCoords         []Coord
+}
+
+func getStarCoords(input []string) []Coord {
+	starCoords := []Coord{}
+
+	for i, row := range input {
+		for j, run := range row {
+			if string(run) == "*" {
+				starCoords = append(starCoords, Coord{i, j})
+			}
+		}
+	}
+	return starCoords
 }
 
 func getPartNums(input []string) []PartNum {
@@ -137,7 +138,6 @@ func getPartNums(input []string) []PartNum {
 				thisPartNum.coords = append(thisPartNum.coords, Coord{i, j})
 				thisPartNum.number += string(run)
 				prevIsNum = false
-				fmt.Printf("End col number: %s\n", thisPartNum.number)
 				partNums = append(partNums, thisPartNum)
 				continue
 			} else {
@@ -148,7 +148,6 @@ func getPartNums(input []string) []PartNum {
 				}
 			}
 		}
-		// break
 	}
 
 	return partNums
